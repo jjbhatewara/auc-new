@@ -7,6 +7,11 @@ from django.db import IntegrityError
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
+import torch
+
+from auctions.forms import AuctionListingForm
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s')  # or yolov5m, yolov5l, yolov5x, custom
+
 
 from .models import User, Category, AuctionListing, Bid, Comment
 
@@ -81,18 +86,42 @@ def register(request):
 @login_required
 def createListing(request):
     if request.method == 'POST':
+        # form = AuctionListingForm(request.POST,request.FILES,date=timezone.now(),active=True)
+        # if form.is_valid():
+        #     obj = form.save(request.user)
+        # else:
+        #     print("ERROR")
         title = request.POST["title"]
         description = request.POST["description"]
         startBid = request.POST["startBid"]
         category = Category.objects.get(id=request.POST["category"])
         user = request.user
         imageUrl = request.POST["url"]
+        # print("OKOKOK")
+        # imageUrl = request.FILES.get('url', False)
+        # print("KIJEIS")
+        # print(imageUrl)
+        # print("OKINSD")
+        results = model(imageUrl)
+        class_name = repr(category).split(':')[2].strip().lower().replace('>','')
+        class_pred = results.pandas().xyxy[0].name
+        percentage_pred = results.pandas().xyxy[0].confidence
+        is_same = False
+        max_percentage = 0
+        for i in range(len(class_pred)):
+            if class_pred[i].lower() == class_name:
+                if percentage_pred[i] >= 0.60:
+                    is_same = True
+                elif percentage_pred[i] >= 0.30:
+                    max_percentage = round(max(max_percentage,percentage_pred[i]),2)
+        results.show()
         if imageUrl == '':
             imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/300px-No_image_available.svg.png"
         listing = AuctionListing.objects.create(
-            name=title, category=category, date=timezone.now(), startBid=startBid, description=description, user=user, imageUrl=imageUrl, active=True)
+            name=title,is_same=is_same,yolo_pred_class=class_pred[0],yolo_pred_percentage=percentage_pred[0], category=category, date=timezone.now(), startBid=startBid, description=description, user=user, imageUrl=imageUrl, active=True)
         listing.save()
         return HttpResponseRedirect(reverse("index"))
+    # form = AuctionListingForm()
     return render(request, "auctions/createListing.html", {
         'categories': Category.objects.all()
     })
@@ -154,6 +183,7 @@ def comment(request, id):
 @login_required
 def bid(request, id):
     if request.method == 'POST':
+        
         auctionListing = AuctionListing.objects.get(id=id)
         bidValue = request.POST["bid"]
         args = Bid.objects.filter(auctionListing=auctionListing)
@@ -163,8 +193,14 @@ def bid(request, id):
         if float(bidValue) < auctionListing.startBid or float(bidValue) <= value:
             messages.warning(
                 request, f'Bid Higher than: {max(value, auctionListing.startBid)}!')
-            return HttpResponseRedirect(reverse("details", kwargs={'id': id}))
+            return HttpResponseRedirect(reverse("details", kwargs={'id': id}))        
         user = request.user
+        if( user == auctionListing.user ):
+            messages.warning(
+                request,'Seller cannot bid on his own product ')
+            return HttpResponseRedirect(reverse("details", kwargs={'id': id})) 
+
+        print(auctionListing.user)
         bid = Bid.objects.create(
             date=timezone.now(), user=user, bidValue=bidValue, auctionListing=auctionListing)
         bid.save()

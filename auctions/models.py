@@ -21,7 +21,11 @@ class AuctionListing(models.Model):
     startBid = models.DecimalField(decimal_places=2, max_digits=7)
     description = models.CharField(max_length=250)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    # imageUrl = models.ImageField(upload_to='images/')
     imageUrl = models.URLField(blank=True)
+    yolo_pred_class = models.CharField(max_length=50,blank=True)
+    yolo_pred_percentage = models.DecimalField(max_digits=5,decimal_places=2,blank=True)
+    is_same = models.BooleanField(default=False)
     active = models.BooleanField()
 
     def __str__(self):
@@ -48,3 +52,4 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.id} : {self.user.username} commented on {self.auctionListing.name} posted by {self.auctionListing.user.username} at {self.date} : {self.commentValue}"
+

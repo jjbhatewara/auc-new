@@ -5,10 +5,21 @@
 {% endblock %}
 
 {% block body %}
-<div class="container detail-page">
-    <h4 class="mb-3">Listing: <span class="title">{{ item.name }}</span></h4>
+<div class="container detail-page"> 
+    <h3 style="float: left;" class="mb-3"> Listing: </h3>
+    <h4 style="float: left;" class="mt-1" > &nbsp;&nbsp;{{ item.name }}  </h4>
+    {{ item.yolo_pred_percentage }}
+    {% if item.is_same %}
+    <h4 style="float: left;" class="badge bg-success"> TRUSTED </h4>
+    {% elif item.yolo_pred_percentage >= 0.30 %}
+    <h4 style="float: left;" class="badge bg-warning text-dark"> WARNING </h4>
+    {% else %}
+    <h4 style="float: left;" class="badge bg-danger"> NOT TRUSTED </h4>
+    {% endif %}
+
+
     <div class="image">
-        <img class="big" src="{{ item.imageUrl }}" alt="{{ item.id }}">
+        <img class="big" src="{{ item.imageUrl }}" alt="{{ item.id }}">        
     </div>
     <div class="item-description">
         {{ item.description }}
@@ -28,7 +39,7 @@
     <section class="my-3">
         {% if messages %}
         {% for message in messages %}
-        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
+        <div class="text-center alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">{{ message }}</div>
         {% endfor %}
         {% endif %}
 
@@ -51,8 +62,9 @@
                 <input type="number" name="bid" class="form-control" placeholder="Bid" step=".01">
             </div>
             <div class="row justify-content-around">
-                <button class="btn btn-primary" type="submit">Place Bid</button>
-                {% if item.user.username == user.username %}
+                {% if item.user.username != user.username %}
+                    <button class="btn btn-primary" type="submit">Place Bid</button>
+                {% else %}
                 <a href="{% url 'end' item.id %}">
                     <button class="btn btn-warning" type="button">End Auction</button>
                 </a>
@@ -74,7 +86,7 @@
     <section>
         Comments:
         {% for comment in comments %}
-        <div class="card comment">
+        <div class="card comment  ">
             <div class="card-body">
                 <div class="card-title">
                     <strong>{{ comment.user.username }}</strong>: {{ comment.commentValue }}
@@ -85,7 +97,7 @@
             </div>
         </div>
         {% empty %}
-        <div class="alert alert-info mt-2">
+        <div class="  alert alert-info mt-2">
             No Comments Yet
         </div>
         {% endfor %}
